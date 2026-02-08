@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BioPro Ultra | הכרטיס הדיגיטלי שלך</title>
@@ -17,6 +18,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <div id="qrcode-container" class="hidden glass p-4 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[60]"></div>
 
     <script>
         tailwind.config = {
@@ -88,6 +90,15 @@
             box-sizing: border-box;
             animation: rotation 1s linear infinite;
         }
+        @keyframes gradient-xy {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+.theme-animate {
+    background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+    background-size: 400% 400%;
+    animation: gradient-xy 15s ease infinite;
+}
         @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         /* Themes */
@@ -233,7 +244,11 @@
                 <section class="space-y-4">
                     <div class="flex justify-between items-center px-2">
                         <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider">קישורים</h3>
-                        <button onclick="addLink()" class="text-xs bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 rounded-lg transition font-bold"><i class="fa-solid fa-plus ml-1"></i> הוסף חדש</button>
+                        <div class="flex gap-2">
+    <button onclick="addLink('link')" class="flex-1 text-xs bg-indigo-600 hover:bg-indigo-500 py-2 rounded-lg transition font-bold"><i class="fa-solid fa-link ml-1"></i> קישור</button>
+    <button onclick="addLink('youtube')" class="flex-1 text-xs bg-red-600 hover:bg-red-500 py-2 rounded-lg transition font-bold"><i class="fa-brands fa-youtube ml-1"></i> וידאו</button>
+    <button onclick="addLink('header')" class="flex-1 text-xs bg-slate-600 hover:bg-slate-500 py-2 rounded-lg transition font-bold"><i class="fa-solid fa-heading ml-1"></i> כותרת</button>
+</div>
                     </div>
                     <div id="links-editor-container" class="space-y-3">
                         </div>
@@ -453,6 +468,12 @@
                 el.innerHTML = `
                     <div class="flex flex-col gap-1 text-slate-500">
                         <button onclick="moveLink(${i}, -1)" class="hover:text-white"><i class="fa-solid fa-chevron-up text-xs"></i></button>
+                        // בתוך ה-HTML שנוצר ב-renderEditorLinks:
+// הוסף את זה לפני כפתור המחיקה (הפח זבל):
+
+<button onclick="toggleLinkVisibility(${i})" class="w-8 h-8 rounded-lg hover:bg-white/10 transition ${link.active === false ? 'text-red-400' : 'text-green-400'}">
+    <i class="fa-solid ${link.active === false ? 'fa-eye-slash' : 'fa-eye'}"></i>
+</button>
                         <button onclick="moveLink(${i}, 1)" class="hover:text-white"><i class="fa-solid fa-chevron-down text-xs"></i></button>
                     </div>
                     <div class="flex-1 space-y-2">
@@ -472,6 +493,13 @@
             });
         }
 
+        function toggleLinkVisibility(index) {
+    // אם המאפיין לא קיים, נגדיר אותו כ-true ברירת מחדל
+    if (userData.links[index].active === undefined) userData.links[index].active = true;
+    
+    userData.links[index].active = !userData.links[index].active;
+    debouncedSave();
+}
         function renderProfile(container, isPublic) {
             // Apply Theme Class
             container.className = `w-full min-h-full flex flex-col items-center pt-12 px-6 pb-10 overflow-y-auto no-scrollbar ${userData.theme}`;
@@ -487,28 +515,48 @@
                 <div class="w-full max-w-md space-y-3 pb-12">
             `;
 
-            userData.links.forEach((link, i) => {
-                if(!link.t) return;
-                const iconClass = getIcon(link.u);
-                
-                // OnClick logic
-                const clickAttr = isPublic ? `onclick="trackClick(${i}, '${publicUid}')"` : `onclick="return false;"`;
-                const targetAttr = isPublic ? `target="_blank"` : ``;
-                const cursorClass = isPublic ? `cursor-pointer hover:scale-[1.02] active:scale-95` : `cursor-default opacity-90`;
+userData.links.forEach((link, i) => {
+    if (!link.active && isPublic) return; // דילוג אם מוסתר
 
-                html += `
-                    <a href="${link.u}" ${targetAttr} ${clickAttr} 
-                       class="relative flex items-center p-4 rounded-xl transition-all duration-300 shadow-lg ${cursorClass} animate-pop"
-                       style="background: var(--card-bg, rgba(255,255,255,0.1)); animation-delay: ${i * 100}ms">
-                        <div class="absolute inset-0 bg-white/5 opacity-0 hover:opacity-100 transition rounded-xl"></div>
-                        <div class="w-10 h-10 rounded-full bg-black/10 flex items-center justify-center text-lg z-10">
-                            <i class="${iconClass}"></i>
-                        </div>
-                        <div class="flex-1 text-center font-bold z-10">${escapeHtml(link.t)}</div>
-                        <div class="w-10 flex justify-end opacity-50 z-10"><i class="fa-solid fa-arrow-left"></i></div>
-                    </a>
-                `;
-            });
+    // --- סוג 1: כותרת חוצצת ---
+    if (link.type === 'header') {
+        html += `<h3 class="w-full text-center text-lg font-bold text-white/80 mt-6 mb-2 animate-pop">${escapeHtml(link.t)}</h3>`;
+        return;
+    }
+
+    // --- סוג 2: נגן יוטיוב ---
+    if (link.type === 'youtube' && link.u) {
+        // חילוץ ה-ID של הסרטון
+        let videoId = link.u.split('v=')[1];
+        const ampersandPosition = videoId ? videoId.indexOf('&') : -1;
+        if(ampersandPosition != -1) {
+            videoId = videoId.substring(0, ampersandPosition);
+        }
+        
+        if (videoId) {
+            html += `
+            <div class="w-full rounded-2xl overflow-hidden shadow-lg mb-4 animate-pop border border-white/10" style="animation-delay: ${i * 100}ms">
+                <iframe width="100%" height="200" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>`;
+        }
+        return;
+    }
+
+    // --- סוג 3: קישור רגיל (הקוד הקיים שלך עם שיפור קטן) ---
+    const iconClass = getIcon(link.u);
+    const clickAttr = isPublic ? `onclick="trackClick(${i}, '${publicUid}')"` : `onclick="return false;"`;
+    
+    html += `
+        <a href="${link.u}" target="_blank" ${clickAttr} 
+           class="relative flex items-center p-4 rounded-xl transition-all duration-300 shadow-lg hover:scale-[1.02] active:scale-95 mb-3 animate-pop"
+           style="background: var(--card-bg, rgba(255,255,255,0.1)); border: 1px solid rgba(255,255,255,0.05); animation-delay: ${i * 100}ms">
+            <div class="w-10 h-10 rounded-full bg-black/20 flex items-center justify-center text-lg z-10 ml-3">
+                <i class="${iconClass}"></i>
+            </div>
+            <div class="flex-1 text-center font-bold z-10">${escapeHtml(link.t)}</div>
+        </a>
+    `;
+});
 
             html += `</div>`;
             
@@ -525,10 +573,30 @@
 
         // --- ACTIONS ---
 
-        function addLink() {
-            userData.links.push({ t: "", u: "", clicks: 0 });
-            debouncedSave();
-        }
+function addLink(type = 'link') {
+    // type יכול להיות 'link', 'youtube', 'header'
+    userData.links.push({ t: "", u: "", type: type, clicks: 0, active: true });
+    debouncedSave();
+}
+
+        function showQRCode() {
+    const container = document.getElementById('qrcode-container');
+    container.innerHTML = ''; // ניקוי
+    container.classList.remove('hidden');
+    
+    const url = `${window.location.origin}${window.location.pathname}?u=${currentUser.uid}`;
+    
+    new QRCode(container, {
+        text: url,
+        width: 200,
+        height: 200,
+        colorDark : "#000000",
+        colorLight : "#ffffff",
+        correctLevel : QRCode.CorrectLevel.H
+    });
+    
+    // הוסף כפתור סגירה ל-container
+}
 
         function deleteLink(index) {
             if(confirm("למחוק?")) {
@@ -558,23 +626,41 @@
             debouncedSave();
         }
 
-        function handleImageUpload(input) {
-            if (input.files && input.files[0]) {
-                const file = input.files[0];
-                
-                // Limit size to 500KB for Firestore optimization
-                if(file.size > 500000) {
-                    return showToast("התמונה גדולה מדי (מקסימום 500KB)", "error");
-                }
+        // 1. הוסף הפניה ל-Storage בראש הסקריפט
+const storage = firebase.storage();
 
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    userData.img = e.target.result; // Base64 string
-                    debouncedSave();
-                };
-                reader.readAsDataURL(file);
-            }
+// 2. פונקציה מתוקנת
+async function handleImageUpload(input) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        
+        // בדיקת גודל וסוג
+        if (!file.type.match('image.*')) return showToast("קובץ לא נתמך", "error");
+        if (file.size > 2 * 1024 * 1024) return showToast("התמונה גדולה מדי (עד 2MB)", "error");
+
+        const loader = document.getElementById('global-loader');
+        loader.style.display = 'flex'; // הצגת טעינה
+
+        try {
+            const storageRef = firebase.storage().ref();
+            // שמירת התמונה בנתיב ייחודי למשתמש
+            const fileRef = storageRef.child(`users/${currentUser.uid}/profile_${Date.now()}`);
+            
+            await fileRef.put(file);
+            const url = await fileRef.getDownloadURL();
+            
+            userData.img = url;
+            updateUI();
+            debouncedSave();
+            showToast("התמונה עודכנה בהצלחה!", "success");
+        } catch (error) {
+            console.error(error);
+            showToast("שגיאה בהעלאת תמונה", "error");
+        } finally {
+            loader.style.display = 'none';
         }
+    }
+}
 
         function debouncedSave() {
             // Grab global inputs
