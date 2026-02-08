@@ -224,6 +224,11 @@
 
                 <section class="space-y-4">
                     <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider px-2">פרופיל אישי</h3>
+                    <div class="grid grid-cols-4 gap-2 mt-4 pt-4 border-t border-white/10">
+    <input id="social_ig" oninput="debouncedSave()" placeholder="Instagram username" class="col-span-2 bg-white/5 rounded-lg px-3 py-2 text-xs outline-none focus:bg-white/10">
+    <input id="social_wa" oninput="debouncedSave()" placeholder="WhatsApp (05X...)" class="col-span-2 bg-white/5 rounded-lg px-3 py-2 text-xs outline-none focus:bg-white/10">
+    <input id="social_mail" oninput="debouncedSave()" placeholder="Email" class="col-span-4 bg-white/5 rounded-lg px-3 py-2 text-xs outline-none focus:bg-white/10">
+</div>
                     <div class="glass p-5 rounded-3xl space-y-4">
                         <div class="flex items-center gap-4">
                             <div class="relative group cursor-pointer w-20 h-20 flex-shrink-0">
@@ -436,6 +441,12 @@
 
         // --- UI RENDERING ---
         function updateUI() {
+            // טעינת סושיאל
+if(userData.socials) {
+    document.getElementById('social_ig').value = userData.socials.ig || "";
+    document.getElementById('social_wa').value = userData.socials.wa || "";
+    document.getElementById('social_mail').value = userData.socials.mail || "";
+}
             // Update Editor Inputs
             const nameInput = document.getElementById('nameIn');
             const bioInput = document.getElementById('bioIn');
@@ -470,7 +481,11 @@
                         <button onclick="moveLink(${i}, -1)" class="hover:text-white"><i class="fa-solid fa-chevron-up text-xs"></i></button>
                         // בתוך ה-HTML שנוצר ב-renderEditorLinks:
 // הוסף את זה לפני כפתור המחיקה (הפח זבל):
-
+${link.type === 'link' ? `
+<button onclick="toggleLinkSize(${i})" class="w-8 h-8 rounded-lg hover:bg-white/10 transition text-indigo-300" title="שנה גודל">
+    <i class="fa-solid ${link.size === 'half' ? 'fa-expand' : 'fa-compress'}"></i>
+</button>
+` : ''}
 <button onclick="toggleLinkVisibility(${i})" class="w-8 h-8 rounded-lg hover:bg-white/10 transition ${link.active === false ? 'text-red-400' : 'text-green-400'}">
     <i class="fa-solid ${link.active === false ? 'fa-eye-slash' : 'fa-eye'}"></i>
 </button>
@@ -492,7 +507,11 @@
                 container.appendChild(el);
             });
         }
-
+function toggleLinkSize(index) {
+    const currentSize = userData.links[index].size || 'full';
+    userData.links[index].size = currentSize === 'full' ? 'half' : 'full';
+    debouncedSave();
+}
         function toggleLinkVisibility(index) {
     // אם המאפיין לא קיים, נגדיר אותו כ-true ברירת מחדל
     if (userData.links[index].active === undefined) userData.links[index].active = true;
@@ -509,10 +528,70 @@
             let html = `
                 <div class="text-center w-full max-w-md mb-8 animate-pop">
                     <img src="${imgUrl}" class="w-24 h-24 rounded-full mx-auto mb-4 object-cover border-4 border-white/10 shadow-2xl">
-                    <h1 class="text-2xl font-black mb-2 tracking-tight">${escapeHtml(userData.name)}</h1>
+                    <h1 class="text-2xl font-black mb-2 tracking-tight flex items-center justify-center gap-2">
+    ${escapeHtml(userData.name)}
+    <i class="fa-solid fa-circle-check text-blue-400 text-lg" title="Verified"></i>
+</h1>
                     <p class="text-sm opacity-70 whitespace-pre-wrap leading-relaxed">${escapeHtml(userData.bio)}</p>
                 </div>
-                <div class="w-full max-w-md space-y-3 pb-12">
+                // מחליף את הקונטיינר הישן ב-Grid
+html += `<div class="w-full max-w-md grid grid-cols-2 gap-3 pb-12 px-2">`;
+
+userData.links.forEach((link, i) => {
+    if (!link.active && isPublic) return;
+
+    // קביעת הגודל: ברירת מחדל רוחב מלא (col-span-2), אם הוגדר כקטן אז (col-span-1)
+    // כותרות ויוטיוב תמיד רוחב מלא
+    let sizeClass = 'col-span-2';
+    if (link.type === 'link' && link.size === 'half') sizeClass = 'col-span-1';
+
+    // --- סוג 1: כותרת ---
+    if (link.type === 'header') {
+        html += `<h3 class="col-span-2 text-center text-lg font-bold text-white/80 mt-4 mb-1 animate-pop">${escapeHtml(link.t)}</h3>`;
+        return;
+    }
+
+    // --- סוג 2: יוטיוב ---
+    if (link.type === 'youtube' && link.u) {
+        let videoId = link.u.split('v=')[1];
+        const ampersandPosition = videoId ? videoId.indexOf('&') : -1;
+        if(ampersandPosition != -1) videoId = videoId.substring(0, ampersandPosition);
+        
+        if (videoId) {
+            html += `
+            <div class="col-span-2 rounded-2xl overflow-hidden shadow-lg animate-pop border border-white/10 h-52 relative">
+                <iframe class="absolute inset-0 w-full h-full" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe>
+            </div>`;
+        }
+        return;
+    }
+
+    // --- סוג 3: קישור רגיל (Bento Style) ---
+    const iconClass = getIcon(link.u);
+    const clickAttr = isPublic ? `onclick="trackClick(${i}, '${publicUid}')"` : `onclick="return false;"`;
+    
+    // עיצוב שונה לקוביה קטנה לעומת מלבן גדול
+    const flexClass = link.size === 'half' ? 'flex-col justify-center gap-2 aspect-square' : 'flex-row items-center';
+    const textClass = link.size === 'half' ? 'text-sm' : 'text-base';
+    
+    html += `
+        <a href="${link.u}" target="_blank" ${clickAttr} 
+           class="${sizeClass} relative flex ${flexClass} p-4 rounded-2xl transition-all duration-300 shadow-lg hover:scale-[1.02] active:scale-95 animate-pop group overflow-hidden"
+           style="background: var(--card-bg, rgba(255,255,255,0.1)); border: 1px solid rgba(255,255,255,0.05); animation-delay: ${i * 50}ms">
+            
+            <div class="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition duration-500"></div>
+            
+            <div class="w-10 h-10 rounded-full bg-black/20 flex items-center justify-center text-lg z-10 shrink-0">
+                <i class="${iconClass}"></i>
+            </div>
+            <div class="text-center font-bold z-10 ${textClass} truncate w-full px-1">${escapeHtml(link.t)}</div>
+            
+            ${link.size !== 'half' ? '<div class="absolute left-4 opacity-50"><i class="fa-solid fa-arrow-left"></i></div>' : ''}
+        </a>
+    `;
+});
+
+html += `</div>`;
             `;
 
 userData.links.forEach((link, i) => {
@@ -663,6 +742,11 @@ async function handleImageUpload(input) {
 }
 
         function debouncedSave() {
+            // שמירת סושיאל
+if(!userData.socials) userData.socials = {};
+userData.socials.ig = document.getElementById('social_ig').value;
+userData.socials.wa = document.getElementById('social_wa').value;
+userData.socials.mail = document.getElementById('social_mail').value;
             // Grab global inputs
             if(document.getElementById('nameIn')) userData.name = document.getElementById('nameIn').value;
             if(document.getElementById('bioIn')) userData.bio = document.getElementById('bioIn').value;
