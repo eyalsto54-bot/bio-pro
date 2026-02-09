@@ -508,7 +508,7 @@ if(userData.socials) {
                 el.innerHTML = `
                     <div class="flex flex-col gap-1 text-slate-500">
                         <button onclick="moveLink(${i}, -1)" class="hover:text-white"><i class="fa-solid fa-chevron-up text-xs"></i></button>
-                     -renderEditorLinks:
+                     
 ${link.type === 'link' ? `
 <button onclick="toggleLinkSize(${i})" class="w-8 h-8 rounded-lg hover:bg-white/10 transition text-indigo-300" title="שנה גודל">
     <i class="fa-solid ${link.size === 'half' ? 'fa-expand' : 'fa-compress'}"></i>
