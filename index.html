@@ -21,6 +21,8 @@
     <div id="qrcode-container" class="hidden glass p-4 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[60]"></div>
 
     <script>
+        let isTyping = false; // דגל שבודק אם המשתמש כותב עכשיו
+let saveTimeout;      // משתנה שינהל את ההשהיה של השמירה
         tailwind.config = {
             theme: {
                 extend: {
@@ -258,17 +260,17 @@
                                 </div>
                                 <input type="file" accept="image/*" onchange="handleImageUpload(this)" class="absolute inset-0 opacity-0 cursor-pointer">
                             </div>
-                            <div class="flex-1 space-y-2"><input type="text" id="nameIn" 
+                         <input type="text" id="nameIn" 
        onfocus="isTyping = true" 
        onblur="isTyping = false" 
-       oninput="debouncedSave()" 
-       placeholder="שם התצוגה" ...>
+       oninput="userData.name = this.value; renderProfile(document.getElementById('preview-content'), false); saveData();" 
+       class="..." placeholder="שם התצוגה">
 
 <input type="text" id="bioIn" 
        onfocus="isTyping = true" 
        onblur="isTyping = false" 
-       oninput="debouncedSave()" 
-       placeholder="תיאור קצר (Bio)" ...>
+       oninput="userData.bio = this.value; renderProfile(document.getElementById('preview-content'), false); saveData();" 
+       class="..." placeholder="תיאור קצר">
                             </div>
                         </div>
                     </div>
@@ -469,34 +471,24 @@
         }
 
         // --- UI RENDERING ---
-        function updateUI() {
-            // טעינת סושיאל
-if(userData.socials) {
-    document.getElementById('social_ig').value = userData.socials.ig || "";
-    document.getElementById('social_wa').value = userData.socials.wa || "";
-    document.getElementById('social_mail').value = userData.socials.mail || "";
+   function updateUI() {
+    if (!userData) return;
+
+    // התיקון הקריטי: מעדכן את התיבות רק אם המשתמש לא נמצא בתוכן כרגע
+    if (!isTyping) {
+        const nameIn = document.getElementById('nameIn');
+        const bioIn = document.getElementById('bioIn');
+        if (nameIn) nameIn.value = userData.name || "";
+        if (bioIn) bioIn.value = userData.bio || "";
+    }
+
+    renderEditorLinks();
+    renderProfile(document.getElementById('preview-content'), false);
+    
+    // עדכון לינק ציבורי
+    const publicUrl = window.location.origin + window.location.pathname + "?u=" + user.uid;
+    document.getElementById('public-url').innerText = publicUrl;
 }
-            // Update Editor Inputs
-            const nameInput = document.getElementById('nameIn');
-            const bioInput = document.getElementById('bioIn');
-            
-            // Only update value if not currently focused (to prevent cursor jumping)
-            if (document.activeElement !== nameInput) nameInput.value = userData.name || "";
-            if (document.activeElement !== bioInput) bioInput.value = userData.bio || "";
-            
-            document.getElementById('editor-avatar').src = userData.img || `https://ui-avatars.com/api/?name=${userData.name || 'User'}&background=random`;
-            
-            // Calc total clicks
-            const total = userData.links.reduce((acc, curr) => acc + (curr.clicks || 0), 0);
-            document.getElementById('total-clicks').innerText = total;
-
-            // Render Links Editor
-            renderEditorLinks();
-            
-            // Render Preview
-            renderProfile(document.getElementById('preview-container'), false);
-        }
-
         function renderEditorLinks() {
             const container = document.getElementById('links-editor-container');
             container.innerHTML = '';
@@ -539,6 +531,20 @@ function toggleLinkSize(index) {
     const currentSize = userData.links[index].size || 'full';
     userData.links[index].size = currentSize === 'full' ? 'half' : 'full';
     debouncedSave();
+}
+
+        function saveData() {
+    if (!user) return;
+    
+    // מנקה את הטיימר הקודם - כדי שלא ישמור על כל אות
+    clearTimeout(saveTimeout);
+    
+    // יוצר טיימר חדש: ישמור רק אחרי 500 מילי-שניות של שקט
+    saveTimeout = setTimeout(() => {
+        db.collection("users").doc(user.uid).set(userData)
+            .then(() => console.log("Saved successfully"))
+            .catch(err => console.error("Error saving:", err));
+    }, 500); 
 }
         function toggleLinkVisibility(index) {
     // אם המאפיין לא קיים, נגדיר אותו כ-true ברירת מחדל
