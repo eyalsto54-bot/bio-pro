@@ -167,6 +167,12 @@
             <div class="absolute bottom-6 font-mono text-xs text-slate-600">LIVE PREVIEW</div>
         </main>
     </div>
+    <div id="qr-container" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-[100]" onclick="this.classList.add('hidden')">
+    <div class="bg-white p-5 rounded-xl text-center">
+        <div id="qrcode-canvas"></div>
+        <p class="mt-2 text-black">סרוק אותי</p>
+    </div>
+</div>
 
 <div class="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
     <div id="share-wrapper" class="relative">
@@ -241,20 +247,33 @@ const firebaseConfig = {
         }
 
         window.onload = () => {
-            initFirebase();
-            
-            // Check if Public View or Admin
-            const params = new URLSearchParams(window.location.search);
-            const publicUid = params.get('u');
+// בדיקה האם יש פרמטר 'u' בכתובת ה-URL (למשל: ?u=12345)
+const params = new URLSearchParams(window.location.search);
+const publicUid = params.get('u');
 
-            if (publicUid) {
-                renderPublicMode(publicUid);
-            } else {
-                initAdminMode();
-            }
-        };
+if (publicUid) {
+    // === מצב אורח ===
+    // 1. הסתר את הדאשבורד ומסך ההתחברות
+    document.getElementById('dashboard').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'none';
+    
+    // 2. הצג את ה-Public View
+    document.getElementById('public-view').classList.remove('hidden');
+    
+    // 3. משוך נתונים מ-Firestore (בזכות החוקים ששינית בסעיף 1 זה יעבוד)
+    loadPublicProfile(publicUid); 
 
-        // --- ADMIN LOGIC ---
+} else {
+    // === מצב אדמין/עריכה ===
+    // כאן תשאיר את בדיקת ה-Auth הרגילה שלך
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            // טען דאשבורד
+        } else {
+            // טען מסך התחברות
+        }
+    });
+}
         function initAdminMode() {
             auth.onAuthStateChanged(user => {
                 const loader = document.getElementById('global-loader');
@@ -560,21 +579,36 @@ function share(type) {
             if (!text) return "";
             return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
+        function showQRCode(url) {
+    const container = document.getElementById('qrcode-canvas');
+    container.innerHTML = ""; // ניקוי קוד קודם אם היה
 
-        function detectIcon(url) {
-            if (!url) return "fa-solid fa-link";
-            const l = url.toLowerCase();
-            if (l.includes('instagram')) return "fa-brands fa-instagram";
-            if (l.includes('facebook')) return "fa-brands fa-facebook";
-            if (l.includes('tiktok')) return "fa-brands fa-tiktok";
-            if (l.includes('twitter') || l.includes('x.com')) return "fa-brands fa-x-twitter";
-            if (l.includes('youtube') || l.includes('youtu.be')) return "fa-brands fa-youtube";
-            if (l.includes('whatsapp') || l.includes('wa.me')) return "fa-brands fa-whatsapp";
-            if (l.includes('linkedin')) return "fa-brands fa-linkedin";
-            if (l.includes('github')) return "fa-brands fa-github";
-            if (l.includes('spotify')) return "fa-brands fa-spotify";
-            return "fa-solid fa-link";
-        }
+    new QRCode(container, {
+        text: url,
+        width: 128,
+        height: 128
+    });
+
+    document.getElementById('qr-container').classList.remove('hidden');
+}
+
+function detectIcon(url) {
+    if (!url) return "fa-solid fa-link"; // ברירת מחדל אם ריק
+    const lowerUrl = url.toLowerCase();
+
+    // בדיקות ספציפיות
+    if (lowerUrl.includes('instagram')) return "fa-brands fa-instagram";
+    if (lowerUrl.includes('tiktok')) return "fa-brands fa-tiktok";
+    if (lowerUrl.includes('whatsapp') || lowerUrl.includes('wa.me')) return "fa-brands fa-whatsapp";
+    if (lowerUrl.includes('youtube')) return "fa-brands fa-youtube";
+    if (lowerUrl.includes('facebook')) return "fa-brands fa-facebook";
+    
+    // ... תוסיף עוד רשתות לפי הצורך ...
+
+    // *** החלק החשוב: ברירת מחדל ***
+    // אם שום דבר למעלה לא החזיר תשובה, הקוד יגיע לפה:
+    return "fa-solid fa-globe"; // אייקון של גלובוס לכל אתר לא מזוהה
+}
     </script>
 </body>
 </html>
