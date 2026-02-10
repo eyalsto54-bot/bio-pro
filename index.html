@@ -21,6 +21,9 @@
     <div id="qrcode-container" class="hidden glass p-4 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[60]"></div>
 
     <script>
+
+        let isTyping = false; // דגל שבודק אם המשתמש כותב עכשיו
+let saveTimeout;      // משתנה שינהל את ההשהיה של השמירה
         let isTyping = false; // דגל שבודק אם המשתמש כותב עכשיו
 let saveTimeout;      // משתנה שינהל את ההשהיה של השמירה
         tailwind.config = {
@@ -533,7 +536,7 @@ function toggleLinkSize(index) {
     debouncedSave();
 }
 
-        function saveData() {
+function saveData() {
     if (!user) return;
     
     // מנקה את הטיימר הקודם - כדי שלא ישמור על כל אות
@@ -545,13 +548,6 @@ function toggleLinkSize(index) {
             .then(() => console.log("Saved successfully"))
             .catch(err => console.error("Error saving:", err));
     }, 500); 
-}
-        function toggleLinkVisibility(index) {
-    // אם המאפיין לא קיים, נגדיר אותו כ-true ברירת מחדל
-    if (userData.links[index].active === undefined) userData.links[index].active = true;
-    
-    userData.links[index].active = !userData.links[index].active;
-    debouncedSave();
 }
 
 
