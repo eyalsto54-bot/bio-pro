@@ -168,25 +168,28 @@
         </main>
     </div>
 
-    <template id="public-template">
-        <!DOCTYPE html>
-        <html dir="rtl">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <script src="https://cdn.tailwindcss.com"></script>
-            <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
-            <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700;900&display=swap" rel="stylesheet">
-            <style>
-                body { font-family: 'Heebo', sans-serif; min-height: 100vh; overflow-x: hidden; }
-                .link-card { transition: transform 0.2s, box-shadow 0.2s; }
-                .link-card:hover { transform: translateY(-2px); }
-                .link-card:active { transform: scale(0.98); }
-                /* Theme Vars are injected via JS */
-                .theme-dark { background: #000; color: #fff; --card: rgba(255,255,255,0.12); --text: #fff; }
-                .theme-ocean { background: linear-gradient(180deg, #0f172a 0%, #0ea5e9 100%); color: #fff; --card: rgba(255,255,255,0.15); --text: #fff; }
-                .theme-candy { background: linear-gradient(45deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%); color: #4a044e; --card: rgba(255,255,255,0.6); --text: #4a044e; }
-                .theme-minimal { background: #f8fafc; color: #0f172a; --card: #fff; --text: #0f172a; border: 1px solid #e2e8f0; }
+<div class="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
+    <div id="share-wrapper" class="relative">
+        <button onclick="toggleShare()" class="w-14 h-14 bg-white rounded-full shadow-xl z-20 relative text-black text-xl">
+            <i class="fa-solid fa-share-nodes"></i>
+        </button>
+
+        <button onclick="share('wa')" class="share-btn absolute top-0 left-0 w-10 h-10 bg-green-500 rounded-full text-white shadow-lg transition-all duration-300 opacity-0 pointer-events-none">
+            <i class="fa-brands fa-whatsapp"></i>
+        </button>
+        <button onclick="share('copy')" class="share-btn absolute top-0 left-0 w-10 h-10 bg-gray-700 rounded-full text-white shadow-lg transition-all duration-300 opacity-0 pointer-events-none">
+            <i class="fa-solid fa-copy"></i>
+        </button>
+        <button onclick="share('qr')" class="share-btn absolute top-0 left-0 w-10 h-10 bg-blue-600 rounded-full text-white shadow-lg transition-all duration-300 opacity-0 pointer-events-none">
+            <i class="fa-solid fa-qrcode"></i>
+        </button>
+    </div>
+</div>
+
+/* הזזת הכפתורים למיקומים שונים סביב המרכז */
+.share-wrapper.open .share-btn:nth-child(2) { transform: translate(-50px, -40px); } /* שמאלה למעלה */
+.share-wrapper.open .share-btn:nth-child(3) { transform: translate(0px, -65px); }   /* למעלה במרכז */
+.share-wrapper.open .share-btn:nth-child(4) { transform: translate(50px, -40px); }  /* ימינה למעלה */
             </style>
         </head>
         <body id="body" class="flex flex-col items-center py-12 px-6 theme-dark">
@@ -295,6 +298,23 @@ const firebaseConfig = {
                 showToast("שגיאה בטעינת הנתונים", "error");
             });
         }
+        function toggleShare() {
+    document.getElementById('share-wrapper').classList.toggle('open');
+}
+
+function share(type) {
+    const url = window.location.href;
+    if (type === 'wa') window.open(`https://wa.me/?text=${url}`);
+    if (type === 'copy') {
+        navigator.clipboard.writeText(url);
+        alert('הועתק!');
+    }
+    if (type === 'qr') {
+        // כאן תפעיל את פונקציית ה-QR (ראה סעיף 4)
+        showQRCode(url); 
+    }
+    toggleShare(); // סגור את התפריט אחרי לחיצה
+}
 
         // --- UI UPDATES (EDITOR) ---
         function updateDashboardUI() {
