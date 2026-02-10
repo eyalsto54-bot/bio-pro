@@ -364,21 +364,25 @@ let saveTimeout;      // משתנה שינהל את ההשהיה של השמיר
         });
 
         // --- AUTH FUNCTIONS ---
-        function initAuthObserver() {
-            auth.onAuthStateChanged(user => {
-                const loader = document.getElementById('global-loader');
-                if (user) {
-                    currentUser = user;
-                    // Setup Realtime Listener
-                    setupRealtimeListener(user.uid);
-                } else {
-                    document.getElementById('auth-screen').style.display = 'flex';
-                    document.getElementById('dashboard').classList.add('hidden');
-                    loader.classList.add('opacity-0');
-                    setTimeout(() => loader.style.display = 'none', 500);
-                }
-            });
+function initAuthObserver() {
+    auth.onAuthStateChanged(user => {
+        const loader = document.getElementById('global-loader');
+        if (user) {
+            currentUser = user;
+            setupRealtimeListener(user.uid);
+        } else {
+            // אם המשתמש לא מחובר, חייבים להעלים את הלואודר כדי שיראה את מסך הכניסה
+            document.getElementById('auth-screen').style.display = 'flex';
+            document.getElementById('dashboard').classList.add('hidden');
+            loader.classList.add('opacity-0');
+            setTimeout(() => loader.style.display = 'none', 500);
         }
+    }, error => {
+        // במקרה של שגיאת התחברות (למשל חסימת דפדפן)
+        console.error("Auth error:", error);
+        document.getElementById('global-loader').style.display = 'none';
+    });
+}
 
         async function loginWithGoogle() {
             try {
@@ -489,8 +493,7 @@ let saveTimeout;      // משתנה שינהל את ההשהיה של השמיר
     renderProfile(document.getElementById('preview-content'), false);
     
     // עדכון לינק ציבורי
-    const publicUrl = window.location.origin + window.location.pathname + "?u=" + user.uid;
-    document.getElementById('public-url').innerText = publicUrl;
+const publicUrl = window.location.origin + window.location.pathname + "?u=" + currentUser.uid;    document.getElementById('public-url').innerText = publicUrl;
 }
         function renderEditorLinks() {
             const container = document.getElementById('links-editor-container');
@@ -537,15 +540,14 @@ function toggleLinkSize(index) {
 }
 
 function saveData() {
-    if (!user) return;
-    
+if (!currentUser) return;    
     // מנקה את הטיימר הקודם - כדי שלא ישמור על כל אות
     clearTimeout(saveTimeout);
     
     // יוצר טיימר חדש: ישמור רק אחרי 500 מילי-שניות של שקט
     saveTimeout = setTimeout(() => {
-        db.collection("users").doc(user.uid).set(userData)
-            .then(() => console.log("Saved successfully"))
+db.collection("users").doc(currentUser.uid).set(userData)
+    .then(() => console.log("Saved successfully"))
             .catch(err => console.error("Error saving:", err));
     }, 500); 
 }
