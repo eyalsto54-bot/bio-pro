@@ -246,33 +246,38 @@ const firebaseConfig = {
             }
         }
 
-        window.onload = () => {
-// בדיקה האם יש פרמטר 'u' בכתובת ה-URL (למשל: ?u=12345)
-const params = new URLSearchParams(window.location.search);
-const publicUid = params.get('u');
+// --- מנגנון אתחול משופר ---
+window.onload = async () => {
+    try {
+        initFirebase();
+        
+        // טיימר בטיחות - אם המידע לא נטען תוך 7 שניות, נקה את הלואדר והצג הודעה
+        const safetyTimeout = setTimeout(() => {
+            hideLoader();
+            if(!currentUser) showToast("חיבור איטי, אנא המתן...", "info");
+        }, 7000);
 
-if (publicUid) {
-    // === מצב אורח ===
-    // 1. הסתר את הדאשבורד ומסך ההתחברות
-    document.getElementById('dashboard').style.display = 'none';
-    document.getElementById('login-screen').style.display = 'none';
-    
-    // 2. הצג את ה-Public View
-    document.getElementById('public-view').classList.remove('hidden');
-    
-    // 3. משוך נתונים מ-Firestore (בזכות החוקים ששינית בסעיף 1 זה יעבוד)
-    loadPublicProfile(publicUid); 
+        const params = new URLSearchParams(window.location.search);
+        const publicUid = params.get('u');
 
-} else {
-    // === מצב אדמין/עריכה ===
-    // כאן תשאיר את בדיקת ה-Auth הרגילה שלך
-    auth.onAuthStateChanged(user => {
-        if (user) {
-            // טען דאשבורד
+        if (publicUid) {
+            await renderPublicMode(publicUid);
+            clearTimeout(safetyTimeout);
         } else {
-            // טען מסך התחברות
+            initAdminMode();
         }
-    });
+    } catch (error) {
+        console.error("Critical Init Error:", error);
+        hideLoader();
+    }
+};
+
+function hideLoader() {
+    const loader = document.getElementById('global-loader');
+    if (loader) {
+        loader.style.opacity = '0';
+        setTimeout(() => loader.style.display = 'none', 500);
+    }
 }
         function initAdminMode() {
             auth.onAuthStateChanged(user => {
@@ -400,6 +405,61 @@ function share(type) {
                 doc.close();
             }
 
+            <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+<link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+<script>
+    // --- הגדרות מערכת מתקדמות ---
+    const CONFIG = {
+        MAX_LINKS: 15,
+        SAVE_DELAY: 1500,
+        SUPPORTED_FONTS: ['Heebo', 'Outfit', 'Assistant', 'Rubik']
+    };
+
+
+
+    function initFirebase() {
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+            auth = firebase.auth();
+            db = firebase.firestore();
+            storage = firebase.storage();
+        }
+    }
+    // בתוך ה-loop שמייצר את הלינקים ב-Public Mode:
+a.onclick = (e) => trackClick(link.id || index);
+
+async function trackClick(linkId) {
+    const publicUid = new URLSearchParams(window.location.search).get('u');
+    if(!publicUid) return;
+
+    const statsRef = db.collection('users').doc(publicUid).collection('analytics').doc('clicks');
+    await statsRef.set({
+        [linkId]: firebase.firestore.FieldValue.increment(1),
+        totalClicks: firebase.firestore.FieldValue.increment(1)
+    }, { merge: true });
+}
+
+    function downloadVCard() {
+    const name = userData.name;
+    const phone = userData.links.find(l => l.url.includes('wa.me'))?.url.split('wa.me/')[1] || "";
+    
+    const vcard = `BEGIN:VCARD
+VERSION:3.0
+FN:${name}
+TEL;TYPE=CELL:${phone}
+END:VCARD`;
+
+    const blob = new Blob([vcard], { type: 'text/vcard' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${name}.vcf`;
+    a.click();
+}
+</script>
+
             // Update Content inside Iframe
             setTimeout(() => {
                 const body = doc.body;
@@ -501,6 +561,28 @@ function share(type) {
             }, 1000);
         }
 
+async function saveLead(event) {
+    event.preventDefault();
+    const name = document.getElementById('lead-name').value;
+    const phone = document.getElementById('lead-phone').value;
+    
+    if(!name || !phone) return alert("נא למלא שם וטלפון");
+
+    try {
+        const publicUid = new URLSearchParams(window.location.search).get('u');
+        await db.collection('users').doc(publicUid).collection('leads').add({
+            name,
+            phone,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        event.target.innerHTML = "<p class='text-green-400 font-bold'>הפרטים נשלחו בהצלחה! ✅</p>";
+        confetti(); // דורש ספריית canvas-confetti
+    } catch (e) {
+        alert("שגיאה בשליחת הפרטים.");
+    }
+}
+
         function loginGoogle() {
             const provider = new firebase.auth.GoogleAuthProvider();
             auth.signInWithPopup(provider).catch(e => showToast(e.message, "error"));
@@ -550,6 +632,14 @@ async function handleLinkClick(linkIndex, url) {
             const doc = iframe.contentDocument;
             doc.open();
             doc.write(document.getElementById('public-template').innerHTML);
+<div class="mt-8 p-6 glass rounded-2xl border border-white/10 w-full">
+    <h3 class="text-lg font-bold mb-4 text-center">נחזור אליך בהקדם</h3>
+    <form onsubmit="saveLead(event)" class="flex flex-col gap-3">
+        <input id="lead-name" type="text" placeholder="שם מלא" class="bg-white/10 p-3 rounded-xl outline-none border border-transparent focus:border-indigo-500 transition">
+        <input id="lead-phone" type="tel" placeholder="טלפון" class="bg-white/10 p-3 rounded-xl outline-none border border-transparent focus:border-indigo-500 transition">
+        <button type="submit" class="bg-white text-black font-bold py-3 rounded-xl hover:bg-indigo-500 hover:text-white transition">שלח פרטים</button>
+    </form>
+</div>
             doc.close();
 
             try {
@@ -647,6 +737,24 @@ function detectIcon(url) {
         --accent: #06b6d4;
         --card-blur: blur(12px);
     }
+                /* אפקט "נשימה" לכפתור הוואטסאפ */
+.btn-whatsapp {
+    animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+    0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+    70% { box-shadow: 0 0 0 15px rgba(34, 197, 94, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+
+/* טשטוש זכוכית מתקדם */
+.glass {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(25px) saturate(150%);
+    -webkit-backdrop-filter: blur(25px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
 
     /* אפקט כפתור זכוכית משופר */
     .glass-button {
