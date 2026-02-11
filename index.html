@@ -3,70 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BioPro Ultra | הכרטיס הדיגיטלי המתקדם</title>
+    <title>BioPro Enterprise | דאשבורד ניהול</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Heebo:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Heebo', 'sans-serif'], display: ['Outfit', 'sans-serif'] },
-                    animation: { 'bounce-slow': 'bounce 3s infinite', 'fade-in': 'fadeIn 0.5s ease-out' },
-                    keyframes: { fadeIn: { '0%': { opacity: '0', transform: 'translateY(10px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } } }
-                }
-            }
-        }
-    </script>
-
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;600;900&family=Heebo:wght@300;700;900&display=swap" rel="stylesheet">
+    
     <style>
-        body { background-color: #0f172a; color: white; overflow-x: hidden; }
-        
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #1e293b; }
-        ::-webkit-scrollbar-thumb { background: #4f46e5; border-radius: 10px; }
-
-        /* Glass Effects */
-        .glass {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-        }
-        .glass-panel { background: #1e293b; border-left: 1px solid rgba(255,255,255,0.05); }
-
-        /* Loader */
-        .loader { width: 48px; height: 48px; border: 5px solid #FFF; border-bottom-color: transparent; border-radius: 50%; animation: rotation 1s linear infinite; }
-        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* Dragging Classes */
-        .sortable-ghost { opacity: 0.4; background: #3730a3; }
-        .sortable-drag { cursor: grabbing; }
-
-        /* Mobile Frame */
-        .phone-frame {
-            box-shadow: 0 0 0 12px #1e293b, 0 0 0 14px #334155, 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            border-radius: 40px;
-        }
-
-        /* Themes */
-        .theme-dark { background: #000; color: #fff; --btn-bg: #222; --btn-text: #fff; }
-        .theme-ocean { background: linear-gradient(180deg, #0f172a 0%, #0ea5e9 100%); color: #fff; --btn-bg: rgba(255,255,255,0.15); --btn-text: #fff; }
-        .theme-candy { background: linear-gradient(45deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%); color: #4a044e; --btn-bg: rgba(255,255,255,0.6); --btn-text: #4a044e; }
-        .theme-minimal { background: #f8fafc; color: #0f172a; --btn-bg: #fff; --btn-text: #0f172a; border: 1px solid #e2e8f0; }
+        :root { --primary: #6366f1; --bg-dark: #020617; }
+        body { background: var(--bg-dark); color: white; font-family: 'Heebo', sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.02); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        /* עיצוב כפתור ווטסאפ פועם */
+        .pulse-wa { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
     </style>
 </head>
 <body class="h-screen flex flex-col font-sans">
@@ -77,7 +33,53 @@
             <span id="toast-msg" class="text-sm font-bold"></span>
         </div>
     </div>
+<body class="h-screen flex flex-col">
+    <div id="global-loader" class="fixed inset-0 z-[100] bg-[#020617] flex flex-col items-center justify-center transition-opacity duration-500">
+        <div class="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+    </div>
 
+    <div id="dashboard" class="hidden flex-1 flex flex-col md:flex-row overflow-hidden">
+        <nav class="w-full md:w-20 bg-slate-900 border-l border-white/5 flex md:flex-col items-center py-4 md:py-8 gap-6 z-30">
+            <div class="text-indigo-500 text-2xl font-black mb-4 hidden md:block">B</div>
+            <button onclick="switchTab('edit')" class="nav-btn text-indigo-400 p-3 rounded-xl hover:bg-white/5"><i class="fa-solid fa-pen-to-square text-xl"></i></button>
+            <button onclick="switchTab('stats')" class="nav-btn text-slate-500 p-3 rounded-xl hover:bg-white/5"><i class="fa-solid fa-chart-line text-xl"></i></button>
+            <button onclick="switchTab('leads')" class="nav-btn text-slate-500 p-3 rounded-xl hover:bg-white/5"><i class="fa-solid fa-users text-xl"></i></button>
+            <button onclick="logout()" class="mt-auto text-red-500 p-3"><i class="fa-solid fa-right-from-bracket"></i></button>
+        </nav>
+
+        <main class="flex-1 overflow-y-auto p-4 md:p-8 no-scrollbar">
+            
+            <div id="tab-edit" class="tab-content active space-y-8 max-w-2xl mx-auto">
+                <h2 class="text-3xl font-black font-display">עורך כרטיס</h2>
+                </div>
+
+            <div id="tab-stats" class="tab-content space-y-8 max-w-4xl mx-auto">
+                <h2 class="text-3xl font-black font-display text-indigo-400">אנליטיקה בזמן אמת</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="glass p-6 rounded-3xl text-center">
+                        <div class="text-slate-400 text-sm">סה"כ קליקים</div>
+                        <div id="stat-total-clicks" class="text-4xl font-black mt-2">0</div>
+                    </div>
+                </div>
+                <div class="glass p-6 rounded-3xl h-80">
+                    <canvas id="clicksChart"></canvas>
+                </div>
+            </div>
+
+            <div id="tab-leads" class="tab-content space-y-8 max-w-4xl mx-auto">
+                <h2 class="text-3xl font-black font-display text-green-400">לידים חדשים</h2>
+                <div id="leads-list" class="space-y-3">
+                    </div>
+            </div>
+        </main>
+
+        <aside class="hidden lg:flex w-[450px] bg-black/20 border-r border-white/5 items-center justify-center">
+            <div class="phone-frame w-[320px] h-[650px] bg-slate-900 rounded-[3rem] ring-8 ring-slate-800 overflow-hidden relative shadow-2xl">
+                <iframe id="preview-frame" class="w-full h-full border-none"></iframe>
+            </div>
+        </aside>
+    </div>
+</body>
     <div id="global-loader" class="fixed inset-0 z-[200] bg-[#0f172a] flex flex-col items-center justify-center transition-opacity duration-500">
         <span class="loader mb-4"></span>
         <h2 class="text-lg font-display font-bold tracking-[0.2em] animate-pulse">BIOPRO ULTRA</h2>
@@ -416,6 +418,67 @@ function share(type) {
         SAVE_DELAY: 1500,
         SUPPORTED_FONTS: ['Heebo', 'Outfit', 'Assistant', 'Rubik']
     };
+
+    // --- ניהול טאבים ---
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.getElementById(`tab-${tabId}`).classList.add('active');
+    
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.replace('text-indigo-400', 'text-slate-500'));
+    event.currentTarget.classList.replace('text-slate-500', 'text-indigo-400');
+
+    if(tabId === 'stats') loadAnalytics();
+    if(tabId === 'leads') loadLeads();
+}
+
+// --- מודול אנליטיקה ---
+async function loadAnalytics() {
+    const snap = await db.collection('users').doc(currentUser.uid).collection('analytics').doc('clicks').get();
+    if(!snap.exists) return;
+    
+    const data = snap.data();
+    document.getElementById('stat-total-clicks').innerText = data.totalClicks || 0;
+    
+    // יצירת גרף
+    const ctx = document.getElementById('clicksChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: Object.keys(data).filter(k => k !== 'totalClicks'),
+            datasets: [{
+                label: 'קליקים לפי לינק',
+                data: Object.values(data).filter(v => typeof v === 'number'),
+                borderColor: '#6366f1',
+                tension: 0.4
+            }]
+        }
+    });
+}
+
+// --- מודול לידים ---
+async function loadLeads() {
+    const container = document.getElementById('leads-list');
+    const snap = await db.collection('users').doc(currentUser.uid).collection('leads').orderBy('timestamp', 'desc').get();
+    
+    container.innerHTML = snap.empty ? '<p class="text-slate-500 text-center">אין לידים עדיין</p>' : '';
+    
+    snap.forEach(doc => {
+        const lead = doc.data();
+        const date = lead.timestamp?.toDate().toLocaleDateString('he-IL');
+        container.innerHTML += `
+            <div class="glass p-4 rounded-2xl flex justify-between items-center animate-fade-in">
+                <div>
+                    <div class="font-bold text-lg">${lead.name}</div>
+                    <div class="text-slate-400 text-sm">${lead.phone}</div>
+                </div>
+                <div class="text-xs text-slate-500">${date || ''}</div>
+                <a href="tel:${lead.phone}" class="bg-green-600/20 text-green-400 p-3 rounded-full hover:bg-green-600 hover:text-white transition">
+                    <i class="fa-solid fa-phone"></i>
+                </a>
+            </div>
+        `;
+    });
+}
 
 
 
