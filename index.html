@@ -13,6 +13,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
@@ -48,28 +49,33 @@
         .loader { width: 48px; height: 48px; border: 5px solid #FFF; border-bottom-color: transparent; border-radius: 50%; animation: rotation 1s linear infinite; }
         @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* כפתור שיתוף מתפוצץ */
-        .share-wrapper .share-btn {
+        /* --- תפריט שיתוף מתפוצץ (Radial Menu) --- */
+        .share-wrapper { position: relative; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; }
+        
+        /* הכפתורים הקטנים (מוסתרים בהתחלה) */
+        .share-btn {
             position: absolute;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) scale(0.5);
             opacity: 0;
             pointer-events: none;
-            transform: scale(0.5);
-            z-index: -1;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 10;
+            width: 45px; height: 45px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            color: white;
+            font-size: 18px;
         }
 
-        /* המיקומים כשהתפריט נפתח */
-        .share-wrapper.open .share-btn {
-            opacity: 1;
-            pointer-events: auto;
-            transform: scale(1);
-            z-index: 10;
-        }
+        /* מצב פתוח */
+        .share-wrapper.open .share-btn { opacity: 1; pointer-events: auto; transform: scale(1); }
         
-        /* אנימציית פיצוץ הכפתורים */
-        .share-wrapper.open .share-btn:nth-child(2) { transform: translate(-50px, -50px); } /* WhatsApp */
-        .share-wrapper.open .share-btn:nth-child(3) { transform: translate(0px, -70px); }   /* Copy */
-        .share-wrapper.open .share-btn:nth-child(4) { transform: translate(50px, -50px); }  /* QR */
+        /* מיקומים בפיצוץ */
+        .share-wrapper.open .share-btn:nth-child(2) { transform: translate(-65px, -50px); background: #25D366; } /* WhatsApp */
+        .share-wrapper.open .share-btn:nth-child(3) { transform: translate(0px, -80px); background: #334155; }   /* Copy */
+        .share-wrapper.open .share-btn:nth-child(4) { transform: translate(65px, -50px); background: #2563EB; }  /* QR */
 
         /* אייפון וירטואלי */
         .phone-frame {
@@ -88,7 +94,7 @@
         .link-card:hover { transform: scale(1.02); }
     </style>
 </head>
-<body class="h-screen flex flex-col font-sans">
+<body class="min-h-screen flex flex-col font-sans">
 
     <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 z-[300] transition-all duration-300 opacity-0 pointer-events-none transform -translate-y-4">
         <div class="glass px-6 py-3 rounded-full flex items-center gap-3 bg-slate-900/90 shadow-2xl border border-indigo-500/30">
@@ -103,10 +109,14 @@
     </div>
 
     <div id="qr-container" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-[250] backdrop-blur-sm" onclick="this.classList.add('hidden')">
-        <div class="bg-white p-6 rounded-2xl text-center shadow-2xl animate-fade-in" onclick="event.stopPropagation()">
-            <h3 class="text-black font-bold mb-4 text-lg">סרוק אותי</h3>
-            <div id="qrcode-canvas" class="flex justify-center"></div>
-            <button onclick="document.getElementById('qr-container').classList.add('hidden')" class="mt-4 text-slate-500 text-sm">סגור</button>
+        <div class="glass bg-white/10 p-8 rounded-3xl text-center shadow-2xl animate-fade-in border border-white/10" onclick="event.stopPropagation()">
+            <h3 class="text-white font-bold mb-6 text-xl">סרוק אותי</h3>
+            <div class="bg-white p-4 rounded-xl inline-block">
+                <div id="qrcode-canvas"></div>
+            </div>
+            <div class="mt-6">
+                <button onclick="document.getElementById('qr-container').classList.add('hidden')" class="text-slate-300 hover:text-white transition text-sm">סגור חלונית</button>
+            </div>
         </div>
     </div>
 
@@ -118,7 +128,7 @@
         
         <div class="glass p-10 rounded-3xl w-full max-w-md text-center relative z-10">
             <h1 class="text-5xl font-black font-display mb-2 bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">BioPro</h1>
-            <p class="text-slate-400 mb-8">צור את הכרטיס הדיגיטלי שלך בדקות</p>
+            <p class="text-slate-400 mb-8">הכרטיס הדיגיטלי שלך בדקות</p>
             <button onclick="loginGoogle()" class="w-full py-3.5 bg-white text-slate-900 rounded-xl font-bold hover:bg-slate-100 transition flex items-center justify-center gap-3 mb-6 shadow-lg shadow-white/10">
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-5">
                 התחבר עם Google
@@ -132,8 +142,8 @@
             <div class="p-5 border-b border-white/5 flex justify-between items-center bg-[#0f172a]/80 backdrop-blur-md sticky top-0 z-30">
                 <div class="font-display font-black text-xl tracking-tight">BIOPRO <span class="text-indigo-500">.</span></div>
                 <div class="flex gap-2">
-                    <button onclick="copyLink()" class="w-9 h-9 rounded-full bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600 hover:text-white transition flex items-center justify-center"><i class="fa-solid fa-link"></i></button>
-                    <button onclick="logout()" class="w-9 h-9 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition flex items-center justify-center"><i class="fa-solid fa-power-off"></i></button>
+                    <button onclick="copyLink()" class="w-9 h-9 rounded-full bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600 hover:text-white transition flex items-center justify-center" title="העתק קישור"><i class="fa-solid fa-link"></i></button>
+                    <button onclick="logout()" class="w-9 h-9 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition flex items-center justify-center" title="התנתק"><i class="fa-solid fa-power-off"></i></button>
                 </div>
             </div>
 
@@ -141,7 +151,7 @@
                 <section class="space-y-4">
                     <div class="flex items-center gap-4 p-4 glass rounded-2xl">
                         <div class="relative w-16 h-16 group cursor-pointer">
-                            <img id="avatar-preview" src="" class="w-full h-full rounded-full object-cover border-2 border-indigo-500">
+                            <img id="avatar-preview" src="" class="w-full h-full rounded-full object-cover border-2 border-indigo-500 bg-slate-800">
                             <div class="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
                                 <i class="fa-solid fa-camera text-white"></i>
                             </div>
@@ -156,7 +166,7 @@
 
                 <section>
                     <div class="flex justify-between items-end mb-4">
-                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">הקישורים שלך</h3>
+                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">קישורים</h3>
                         <button onclick="addLink()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-4 py-2 rounded-lg font-bold transition shadow-lg shadow-indigo-500/20">
                             <i class="fa-solid fa-plus ml-1"></i> הוסף חדש
                         </button>
@@ -178,14 +188,34 @@
 
         <main class="hidden md:flex flex-1 bg-[#020617] items-center justify-center relative p-8">
             <div class="absolute inset-0" style="background-image: radial-gradient(#1e293b 1px, transparent 1px); background-size: 24px 24px; opacity: 0.3;"></div>
-            
             <div class="phone-frame w-[350px] h-[700px] bg-black relative overflow-hidden ring-4 ring-slate-800 z-10 transition-all duration-500">
                 <div class="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-7 bg-black rounded-b-xl z-50"></div>
-                <iframe id="preview-frame" class="w-full h-full bg-black border-none" src="about:blank"></iframe>
+                <iframe id="preview-frame" class="w-full h-full bg-black border-none"></iframe>
             </div>
-            
             <div class="absolute bottom-6 font-mono text-xs text-slate-600">LIVE PREVIEW</div>
         </main>
+    </div>
+
+    <div id="public-view" class="hidden min-h-screen flex-col items-center py-12 px-6 relative transition-colors duration-500">
+        <img id="p-img" class="w-24 h-24 rounded-full object-cover mb-4 shadow-xl border-4 border-white/20 bg-gray-800">
+        <h1 id="p-name" class="text-2xl font-black mb-2 text-center drop-shadow-lg"></h1>
+        <p id="p-bio" class="text-sm opacity-80 text-center max-w-xs mb-8 leading-relaxed"></p>
+        
+        <div id="p-links" class="w-full max-w-md flex flex-col gap-3 pb-24"></div>
+
+        <div class="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
+            <div id="share-wrapper" class="share-wrapper">
+                <button onclick="toggleShare()" class="w-14 h-14 bg-white rounded-full shadow-xl z-20 relative text-black text-xl flex items-center justify-center hover:scale-110 transition cursor-pointer">
+                    <i class="fa-solid fa-share-nodes"></i>
+                </button>
+
+                <button onclick="share('wa')" class="share-btn" title="וואטסאפ"><i class="fa-brands fa-whatsapp"></i></button>
+                <button onclick="share('copy')" class="share-btn" title="העתק קישור"><i class="fa-solid fa-copy"></i></button>
+                <button onclick="share('qr')" class="share-btn" title="QR Code"><i class="fa-solid fa-qrcode"></i></button>
+            </div>
+        </div>
+
+        <div class="mt-auto pt-8 text-[10px] opacity-40 uppercase tracking-widest font-bold">BioPro</div>
     </div>
 
     <template id="public-template">
@@ -193,11 +223,9 @@
         <html dir="rtl">
         <head>
             <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <script src="https://cdn.tailwindcss.com"></script>
             <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
             <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700;900&display=swap" rel="stylesheet">
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
             <style>
                 body { font-family: 'Heebo', sans-serif; min-height: 100vh; overflow-x: hidden; }
                 .link-card { transition: transform 0.2s; }
@@ -206,65 +234,19 @@
                 .theme-ocean { background: linear-gradient(180deg, #0f172a 0%, #0ea5e9 100%); color: #fff; --card: rgba(255,255,255,0.15); --text: #fff; }
                 .theme-candy { background: linear-gradient(45deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%); color: #4a044e; --card: rgba(255,255,255,0.6); --text: #4a044e; }
                 .theme-minimal { background: #f8fafc; color: #0f172a; --card: #fff; --text: #0f172a; border: 1px solid #e2e8f0; }
-
-                /* Share Menu Styles (Inside Template) */
-                .share-wrapper .share-btn {
-                    position: absolute;
-                    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-                    opacity: 0; pointer-events: none; transform: scale(0.5); z-index: -1;
-                }
-                .share-wrapper.open .share-btn { opacity: 1; pointer-events: auto; transform: scale(1); z-index: 10; }
-                .share-wrapper.open .share-btn:nth-child(2) { transform: translate(-50px, -50px); }
-                .share-wrapper.open .share-btn:nth-child(3) { transform: translate(0px, -70px); }
-                .share-wrapper.open .share-btn:nth-child(4) { transform: translate(50px, -50px); }
             </style>
         </head>
-        <body id="body" class="flex flex-col items-center py-12 px-6 theme-dark relative">
-            <img id="p-img" class="w-24 h-24 rounded-full object-cover mb-4 shadow-xl border-4 border-white/20">
+        <body id="body" class="flex flex-col items-center py-12 px-6 theme-dark">
+            <img id="p-img" class="w-24 h-24 rounded-full object-cover mb-4 shadow-xl border-4 border-white/20 bg-gray-800">
             <h1 id="p-name" class="text-2xl font-black mb-2 text-center"></h1>
             <p id="p-bio" class="text-sm opacity-80 text-center max-w-xs mb-8 leading-relaxed"></p>
-            <div id="p-links" class="w-full max-w-md flex flex-col gap-3 pb-24"></div>
-            
-            <div class="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
-                <div id="share-wrapper" class="share-wrapper relative flex items-center justify-center">
-                    <button onclick="toggleShare()" class="w-14 h-14 bg-white rounded-full shadow-xl z-20 relative text-black text-xl flex items-center justify-center hover:scale-110 transition">
-                        <i class="fa-solid fa-share-nodes"></i>
-                    </button>
-                    <button onclick="share('wa')" class="share-btn w-10 h-10 bg-green-500 rounded-full text-white shadow-lg flex items-center justify-center"><i class="fa-brands fa-whatsapp"></i></button>
-                    <button onclick="share('copy')" class="share-btn w-10 h-10 bg-slate-700 rounded-full text-white shadow-lg flex items-center justify-center"><i class="fa-solid fa-copy"></i></button>
-                    <button onclick="share('qr')" class="share-btn w-10 h-10 bg-blue-600 rounded-full text-white shadow-lg flex items-center justify-center"><i class="fa-solid fa-qrcode"></i></button>
-                </div>
-            </div>
-
-            <div id="qr-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-[100]" onclick="this.classList.add('hidden')">
-                <div class="bg-white p-5 rounded-xl text-center" onclick="event.stopPropagation()">
-                    <div id="qrcode-canvas" class="flex justify-center"></div>
-                    <button onclick="document.getElementById('qr-modal').classList.add('hidden')" class="mt-2 text-sm text-gray-500">סגור</button>
-                </div>
-            </div>
-
-            <div class="mt-auto pt-8 text-[10px] opacity-40 uppercase tracking-widest font-bold">BioPro</div>
-
-            <script>
-                function toggleShare() { document.getElementById('share-wrapper').classList.toggle('open'); }
-                function share(type) {
-                    const url = window.location.href;
-                    toggleShare();
-                    if (type === 'wa') window.open(`https://wa.me/?text=${url}`);
-                    if (type === 'copy') { navigator.clipboard.writeText(url); alert('הועתק!'); }
-                    if (type === 'qr') {
-                        const c = document.getElementById('qrcode-canvas'); c.innerHTML = "";
-                        new QRCode(c, { text: url, width: 128, height: 128 });
-                        document.getElementById('qr-modal').classList.remove('hidden');
-                    }
-                }
-            </script>
+            <div id="p-links" class="w-full max-w-md flex flex-col gap-3"></div>
         </body>
         </html>
     </template>
 
     <script>
-        // --- קונפיגורציית FIREBASE ---
+        // --- הגדרות FIREBASE ---
         const firebaseConfig = {
             apiKey: "AIzaSyCQ4JuNyv-OLszK57jgjxsQi4qlOuSJkq8",
             authDomain: "biopro-55077.firebaseapp.com",
@@ -282,53 +264,104 @@
 
         // --- אתחול המערכת ---
         window.onload = function() {
-            // אתחול ספריות Firebase
-            if (!firebase.apps.length) {
-                try {
-                    app = firebase.initializeApp(firebaseConfig);
-                    auth = firebase.auth();
-                    db = firebase.firestore();
-                    storage = firebase.storage();
-                } catch (e) {
-                    console.error("Firebase Init Error:", e);
+            try {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
                 }
+                auth = firebase.auth();
+                db = firebase.firestore();
+                storage = firebase.storage();
+            } catch (e) {
+                console.error("Firebase Init Error:", e);
+                alert("שגיאה בחיבור ל-Firebase. בדוק את הקונסול.");
             }
 
-            // זיהוי האם אנחנו בכתובת ציבורית (Guest Mode)
+            // בדיקת פרמטר URL כדי לדעת אם להציג פרופיל ציבורי או דאשבורד
             const params = new URLSearchParams(window.location.search);
             const publicUid = params.get('u');
 
             if (publicUid) {
-                // === מצב אורח ===
+                // === מצב אורח (Public View) ===
                 document.getElementById('dashboard').style.display = 'none';
                 document.getElementById('auth-screen').style.display = 'none';
-                document.getElementById('global-loader').style.display = 'flex';
                 
-                // טען את הדף הציבורי למסך המלא
+                // טעינת הפרופיל הציבורי
                 loadPublicProfile(publicUid);
+
             } else {
-                // === מצב אדמין (עריכה) ===
-                initAdminMode();
+                // === מצב אדמין (Dashboard) ===
+                auth.onAuthStateChanged(user => {
+                    const loader = document.getElementById('global-loader');
+                    
+                    if (user) {
+                        // משתמש מחובר
+                        currentUser = user;
+                        setupRealtimeListener(user.uid);
+                    } else {
+                        // משתמש לא מחובר
+                        loader.style.opacity = '0';
+                        setTimeout(() => loader.style.display = 'none', 500);
+                        document.getElementById('auth-screen').classList.remove('hidden');
+                        document.getElementById('dashboard').classList.add('hidden');
+                    }
+                });
             }
         };
 
-        // --- פונקציות אדמין ---
-        function initAdminMode() {
-            auth.onAuthStateChanged(user => {
+        // --- פונקציות טעינת נתונים ---
+
+        // 1. טעינת פרופיל ציבורי (לאורח)
+        async function loadPublicProfile(uid) {
+            try {
+                const doc = await db.collection('users').doc(uid).get();
                 const loader = document.getElementById('global-loader');
                 
-                if (user) {
-                    currentUser = user;
-                    setupRealtimeListener(user.uid);
+                // הסתרת טעינה
+                loader.style.opacity = '0';
+                setTimeout(() => loader.style.display = 'none', 500);
+
+                if (doc.exists) {
+                    const data = doc.data();
+                    const view = document.getElementById('public-view');
+                    
+                    view.classList.remove('hidden');
+                    view.style.display = 'flex'; // חשוב!
+
+                    // החלת עיצוב (Theme)
+                    view.className = `min-h-screen flex flex-col items-center py-12 px-6 relative transition-colors duration-500 ${data.theme || 'theme-dark'}`;
+                    
+                    // מילוי תוכן
+                    document.getElementById('p-name').textContent = data.name;
+                    document.getElementById('p-bio').textContent = data.bio;
+                    document.getElementById('p-img').src = data.img || `https://ui-avatars.com/api/?name=${data.name}`;
+                    document.title = `${data.name} | BioPro`;
+
+                    const container = document.getElementById('p-links');
+                    container.innerHTML = '';
+                    
+                    (data.links || []).forEach(link => {
+                        if (!link.active) return;
+                        const a = document.createElement('a');
+                        a.href = link.url;
+                        a.target = '_blank';
+                        a.className = 'w-full p-4 rounded-xl flex items-center justify-center gap-3 font-bold text-sm link-card shadow-lg';
+                        // צבעי הכרטיסים לפי ה-Theme (CSS Variables)
+                        a.style.background = 'var(--card)';
+                        a.style.color = 'var(--text)';
+                        a.innerHTML = `<i class="${detectIcon(link.url)} text-lg"></i> ${escapeHtml(link.title)}`;
+                        container.appendChild(a);
+                    });
                 } else {
-                    loader.style.opacity = '0';
-                    setTimeout(() => loader.style.display = 'none', 500);
-                    document.getElementById('auth-screen').classList.remove('hidden');
-                    document.getElementById('dashboard').classList.add('hidden');
+                    document.body.innerHTML = "<h1 class='text-white text-center mt-10 text-2xl'>המשתמש לא נמצא</h1>";
                 }
-            });
+            } catch (error) {
+                console.error(error);
+                document.getElementById('global-loader').style.display = 'none';
+                alert("שגיאה בטעינת הנתונים. וודא שחוקי Firebase (Rules) מוגדרים נכון.");
+            }
         }
 
+        // 2. האזנה לשינויים בזמן אמת (לאדמין)
         function setupRealtimeListener(uid) {
             db.collection('users').doc(uid).onSnapshot(doc => {
                 const loader = document.getElementById('global-loader');
@@ -340,129 +373,56 @@
 
                 if (doc.exists) {
                     const data = doc.data();
-                    userData = { ...userData, ...data };
+                    userData = { ...userData, ...data }; 
                     updateDashboardUI();
                     updatePreviewFrame();
                 } else {
-                    // משתמש חדש
-                    userData.name = currentUser.displayName || "New User";
+                    // יצירת משתמש חדש אם לא קיים
+                    userData.name = currentUser.displayName || "משתמש חדש";
                     userData.img = currentUser.photoURL || "";
                     saveData();
                 }
             }, err => {
                 console.error(err);
-                showToast("שגיאה בטעינת הנתונים", "error");
+                showToast("שגיאה בטעינה", "error");
             });
         }
 
-        // --- פונקציות תצוגה ציבורית ---
-        async function loadPublicProfile(uid) {
-            try {
-                // שליפת נתונים
-                const doc = await db.collection('users').doc(uid).get();
-                
-                // יצירת Iframe במסך מלא להצגת התבנית
-                document.body.innerHTML = ''; 
-                const iframe = document.createElement('iframe');
-                iframe.style.cssText = "width:100vw; height:100vh; border:none; position:fixed; top:0; left:0; z-index:9999;";
-                document.body.appendChild(iframe);
-                
-                const frameDoc = iframe.contentDocument || iframe.contentWindow.document;
-                
-                // כתיבת התבנית לתוך ה-Iframe
-                const template = document.getElementById('public-template').innerHTML; // שמרנו אותו בזיכרון לפני המחיקה? לא.
-                // תיקון: אנחנו צריכים את התבנית לפני שאנחנו מוחקים את הגוף.
-                // נשתמש בפונקציה אחרת לרינדור.
-            } catch(e) { console.log(e); }
-        }
-
-        // שכתוב פונקציית הטעינה הציבורית בצורה חכמה יותר:
-        // במקום למחוק את הגוף, נשתמש ב-Template ונמלא אותו
-        async function loadPublicProfile(uid) {
-            try {
-                const snap = await db.collection('users').doc(uid).get();
-                const loader = document.getElementById('global-loader');
-                loader.style.opacity = '0';
-                setTimeout(() => loader.style.display = 'none', 500);
-
-                if (snap.exists) {
-                    const data = snap.data();
-                    
-                    // שימוש ב-iframe על כל המסך כדי לבודד סגנונות
-                    const iframe = document.createElement('iframe');
-                    iframe.style.cssText = "width:100vw; height:100vh; border:none; position:fixed; inset:0; z-index:9999; background:black;";
-                    document.body.appendChild(iframe);
-                    
-                    const doc = iframe.contentDocument;
-                    doc.open();
-                    doc.write(document.getElementById('public-template').innerHTML);
-                    doc.close();
-
-                    setTimeout(() => {
-                        const body = doc.getElementById('body');
-                        body.className = `flex flex-col items-center py-12 px-6 ${data.theme || 'theme-dark'} relative`;
-                        
-                        doc.getElementById('p-name').textContent = data.name;
-                        doc.getElementById('p-bio').textContent = data.bio;
-                        doc.getElementById('p-img').src = data.img || `https://ui-avatars.com/api/?name=${data.name}`;
-                        doc.title = data.name;
-
-                        const linksContainer = doc.getElementById('p-links');
-                        (data.links || []).forEach(link => {
-                            if (!link.active) return;
-                            const a = doc.createElement('a');
-                            a.href = link.url;
-                            a.target = '_blank';
-                            a.className = 'w-full p-4 rounded-xl flex items-center justify-center gap-3 font-bold text-sm link-card';
-                            a.style.background = 'var(--card)';
-                            a.style.color = 'var(--text)';
-                            a.innerHTML = `<i class="${detectIcon(link.url)} text-lg"></i> ${escapeHtml(link.title)}`;
-                            linksContainer.appendChild(a);
-                        });
-                    }, 100);
-
-                } else {
-                    document.body.innerHTML = "<h1 style='color:white;text-align:center;margin-top:50px'>משתמש לא נמצא</h1>";
-                }
-            } catch (e) { console.error(e); }
-        }
-
-
-        // --- עדכון ממשק ניהול ---
+        // --- עדכון ממשק ניהול (Dashboard UI) ---
         function updateDashboardUI() {
+            // עדכון שדות טקסט (רק אם לא מקלידים כרגע)
             if (document.activeElement.id !== 'input-name') document.getElementById('input-name').value = userData.name || "";
             if (document.activeElement.id !== 'input-bio') document.getElementById('input-bio').value = userData.bio || "";
             document.getElementById('avatar-preview').src = userData.img || `https://ui-avatars.com/api/?name=${userData.name}`;
 
             const container = document.getElementById('links-container');
             container.innerHTML = '';
-            
+
             userData.links.forEach((link, index) => {
                 const iconClass = detectIcon(link.url);
                 const el = document.createElement('div');
                 el.className = 'glass p-3 rounded-xl flex items-center gap-3 group bg-slate-800/50 hover:bg-slate-800 transition cursor-grab active:cursor-grabbing sortable-item';
                 el.innerHTML = `
-                    <div class="text-slate-600 cursor-grab handle"><i class="fa-solid fa-grip-vertical"></i></div>
+                    <div class="text-slate-600 handle cursor-grab"><i class="fa-solid fa-grip-vertical"></i></div>
                     <div class="flex-1 space-y-1">
-                        <input type="text" value="${escapeHtml(link.title)}" oninput="updateLink(${index}, 'title', this.value)" class="bg-transparent w-full text-sm font-bold outline-none placeholder-slate-600" placeholder="כותרת הקישור">
+                        <input value="${escapeHtml(link.title)}" oninput="updateLink(${index}, 'title', this.value)" class="bg-transparent w-full text-sm font-bold outline-none placeholder-slate-600" placeholder="כותרת">
                         <div class="flex items-center gap-2 text-xs text-indigo-300">
                             <i class="${iconClass}"></i>
-                            <input type="text" value="${escapeHtml(link.url)}" oninput="updateLink(${index}, 'url', this.value)" class="bg-transparent w-full outline-none font-mono opacity-80" placeholder="https://...">
+                            <input value="${escapeHtml(link.url)}" oninput="updateLink(${index}, 'url', this.value)" class="bg-transparent w-full outline-none font-mono opacity-80" placeholder="https://...">
                         </div>
                     </div>
                     <button onclick="toggleLink(${index})" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 transition ${link.active ? 'text-green-400' : 'text-slate-600'}">
                         <i class="fa-solid ${link.active ? 'fa-eye' : 'fa-eye-slash'}"></i>
                     </button>
-                    <button onclick="deleteLink(${index})" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-red-500/20 text-slate-600 hover:text-red-400 transition">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
+                    <button onclick="deleteLink(${index})" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-red-500/20 text-slate-600 hover:text-red-400 transition"><i class="fa-solid fa-trash"></i></button>
                 `;
                 container.appendChild(el);
             });
 
+            // הפעלת ספריית גרירה
             new Sortable(container, {
-                animation: 150,
                 handle: '.handle',
+                animation: 150,
                 onEnd: function (evt) {
                     const item = userData.links.splice(evt.oldIndex, 1)[0];
                     userData.links.splice(evt.newIndex, 0, item);
@@ -471,21 +431,24 @@
             });
         }
 
+        // --- עדכון אייפון וירטואלי (Preview Frame) ---
         function updatePreviewFrame() {
             const frame = document.getElementById('preview-frame');
             const doc = frame.contentDocument || frame.contentWindow.document;
-            
+
+            // אם ה-Iframe ריק, נטען את התבנית
             if (!doc.getElementById('body')) {
                 doc.open();
                 doc.write(document.getElementById('public-template').innerHTML);
                 doc.close();
             }
 
+            // עדכון הנתונים בתוך ה-Iframe (בהשהייה קטנה כדי לוודא טעינה)
             setTimeout(() => {
                 const body = doc.getElementById('body');
                 if(!body) return;
                 
-                body.className = `flex flex-col items-center py-12 px-6 ${userData.theme || 'theme-dark'} relative`;
+                body.className = `flex flex-col items-center py-12 px-6 ${userData.theme}`;
                 
                 doc.getElementById('p-name').textContent = userData.name;
                 doc.getElementById('p-bio').textContent = userData.bio;
@@ -507,14 +470,63 @@
             }, 50);
         }
 
-        // --- פעולות עריכה ---
+        // --- לוגיקת שיתוף (Radial Menu & QR) ---
+        function toggleShare() {
+            document.getElementById('share-wrapper').classList.toggle('open');
+        }
+
+        function share(type) {
+            const url = window.location.href;
+            toggleShare(); // סגור את התפריט אחרי לחיצה
+
+            if (type === 'wa') {
+                window.open(`https://wa.me/?text=${encodeURIComponent(url)}`);
+            }
+            if (type === 'copy') {
+                navigator.clipboard.writeText(url).then(() => {
+                    showToast("הקישור הועתק!");
+                });
+            }
+            if (type === 'qr') {
+                const container = document.getElementById('qrcode-canvas');
+                container.innerHTML = "";
+                new QRCode(container, {
+                    text: url,
+                    width: 150,
+                    height: 150,
+                    colorDark : "#000000",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.H
+                });
+                document.getElementById('qr-container').classList.remove('hidden');
+            }
+        }
+
+        // --- זיהוי אייקונים חכם ---
+        function detectIcon(url) {
+            if (!url) return "fa-solid fa-link";
+            const l = url.toLowerCase();
+            
+            if (l.includes('instagram')) return "fa-brands fa-instagram";
+            if (l.includes('tiktok')) return "fa-brands fa-tiktok";
+            if (l.includes('whatsapp') || l.includes('wa.me')) return "fa-brands fa-whatsapp";
+            if (l.includes('youtube')) return "fa-brands fa-youtube";
+            if (l.includes('facebook')) return "fa-brands fa-facebook";
+            if (l.includes('linkedin')) return "fa-brands fa-linkedin";
+            if (l.includes('twitter') || l.includes('x.com')) return "fa-brands fa-x-twitter";
+            if (l.includes('github')) return "fa-brands fa-github";
+            if (l.includes('spotify')) return "fa-brands fa-spotify";
+            if (l.includes('waze')) return "fa-brands fa-waze";
+            if (l.includes('mailto')) return "fa-solid fa-envelope";
+            if (l.includes('tel')) return "fa-solid fa-phone";
+            
+            return "fa-solid fa-globe"; // אייקון ברירת מחדל
+        }
+
+        // --- פונקציות עריכה וניהול ---
         function addLink() {
             userData.links.push({ title: "", url: "", active: true });
             saveData();
-            setTimeout(() => {
-                const container = document.getElementById('links-container');
-                container.lastElementChild?.scrollIntoView({ behavior: 'smooth' });
-            }, 100);
         }
 
         function updateLink(index, key, value) {
@@ -529,7 +541,7 @@
         }
 
         function deleteLink(index) {
-            if(confirm("למחוק?")) {
+            if (confirm('למחוק את הקישור הזה?')) {
                 userData.links.splice(index, 1);
                 saveData();
             }
@@ -550,74 +562,60 @@
             const file = input.files[0];
             if (!file) return;
             
-            showToast("מעלה תמונה...");
+            showToast("מעלה תמונה, נא להמתין...");
             try {
-                const ref = storage.ref(`users/${currentUser.uid}/profile_${Date.now()}`);
+                const ref = storage.ref(`users/${currentUser.uid}/pic_${Date.now()}`);
                 await ref.put(file);
-                const url = await ref.getDownloadURL();
-                userData.img = url;
+                userData.img = await ref.getDownloadURL();
                 saveData();
-                showToast("התמונה עודכנה!");
-            } catch (e) {
-                showToast("שגיאה בהעלאה", "error");
+                showToast("התמונה עודכנה בהצלחה!");
+            } catch (e) { 
+                console.error(e);
+                showToast("שגיאה בהעלאת התמונה", "error");
             }
         }
 
         function saveData() {
-            if (!currentUser) return;
-            db.collection('users').doc(currentUser.uid).set(userData, { merge: true });
+            if (currentUser) db.collection('users').doc(currentUser.uid).set(userData, { merge: true });
             updateDashboardUI();
         }
 
+        // שמירה בעיכוב (כדי לא להציף את המסד נתונים בכל הקלדת אות)
         function debouncedSave() {
             clearTimeout(saveTimeout);
             saveTimeout = setTimeout(() => {
                 if(currentUser) db.collection('users').doc(currentUser.uid).set(userData, { merge: true });
-            }, 1000);
+            }, 800);
         }
 
         function loginGoogle() {
-            const provider = new firebase.auth.GoogleAuthProvider();
-            auth.signInWithPopup(provider).catch(e => showToast(e.message, "error"));
+            auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => alert(e.message));
         }
 
         function logout() {
             auth.signOut().then(() => location.reload());
         }
 
-        function copyLink() {
-            const url = `${location.origin}${location.pathname}?u=${currentUser.uid}`;
-            navigator.clipboard.writeText(url);
-            showToast("הקישור הועתק!");
+        function showToast(msg, type="success") {
+            const t = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            
+            document.getElementById('toast-msg').innerText = msg;
+            icon.className = type === 'error' ? "fa-solid fa-circle-exclamation text-red-400" : "fa-solid fa-check-circle text-indigo-400";
+
+            t.classList.remove('opacity-0', '-translate-y-4');
+            setTimeout(() => t.classList.add('opacity-0', '-translate-y-4'), 3000);
         }
 
-        function showToast(msg, type = "success") {
-            const toast = document.getElementById('toast');
-            const icon = document.getElementById('toast-icon');
-            const text = document.getElementById('toast-msg');
-            
-            text.innerText = msg;
-            icon.className = type === 'error' ? "fa-solid fa-triangle-exclamation text-red-400" : "fa-solid fa-check-circle text-indigo-400";
-            
-            toast.classList.remove('opacity-0', '-translate-y-4');
-            setTimeout(() => toast.classList.add('opacity-0', '-translate-y-4'), 3000);
+        function copyLink() {
+            if(!currentUser) return;
+            const url = `${location.origin}${location.pathname}?u=${currentUser.uid}`;
+            navigator.clipboard.writeText(url);
+            showToast("הקישור הועתק ללוח!");
         }
 
         function escapeHtml(text) {
-            if (!text) return "";
-            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-        }
-
-        function detectIcon(url) {
-            if (!url) return "fa-solid fa-link";
-            const l = url.toLowerCase();
-            if (l.includes('instagram')) return "fa-brands fa-instagram";
-            if (l.includes('tiktok')) return "fa-brands fa-tiktok";
-            if (l.includes('whatsapp') || l.includes('wa.me')) return "fa-brands fa-whatsapp";
-            if (l.includes('youtube')) return "fa-brands fa-youtube";
-            if (l.includes('facebook')) return "fa-brands fa-facebook";
-            if (l.includes('linkedin')) return "fa-brands fa-linkedin";
-            return "fa-solid fa-globe";
+            return text ? text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;") : "";
         }
     </script>
 </body>
